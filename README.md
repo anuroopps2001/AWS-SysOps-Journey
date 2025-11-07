@@ -30,3 +30,8 @@ aws iam attach-group-policy --group-name AdminGroup --policy-arn arn:aws:iam::aw
 
 aws iam create-user --user-name sysops-admin
 aws iam add-user-to-group --user-name sysops-admin --group-name AdminGroup
+```
+
+```bash
+aws cloudwatch describe-alarms --alarm-names "billing-alerts-alarm" --region us-east-1
+```
