@@ -1,7 +1,7 @@
 # AWS-SysOps-Journey
 # 🧭 Day 01 — AWS Account Setup & IAM Foundations
 
-**Date:** YYYY-MM-DD  
+**Date:** 07-11-25  
 **Goal:** Secure a new AWS account, create IAM users and groups, configure AWS CLI, and enable billing alerts.
 
 ---
