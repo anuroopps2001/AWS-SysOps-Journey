@@ -14,13 +14,13 @@ This is based on the full architecture we built manually.
 
 ---
 
-# ## SECTION 1 — Provider VPC (Service Provider)
+# SECTION 1 — Provider VPC (Service Provider)
 
 The Provider exposes a private service through **PrivateLink**.
 
 ---
 
-# ### 1. Create Provider VPC
+ ### 1. Create Provider VPC
 
 ```
 Name: provider-vpc
@@ -31,7 +31,7 @@ DNS Hostnames: Enabled
 
 ---
 
-# ### 2. Create Provider Subnets
+ ### 2. Create Provider Subnets
 
 ### **Public Subnet**
 
@@ -53,7 +53,7 @@ Auto-assign public IPv4: Disabled
 
 ---
 
-# ### 3. Create and Attach Internet Gateway
+ ### 3. Create and Attach Internet Gateway
 
 ```
 Name: provider-igw
@@ -62,7 +62,7 @@ Attach to: provider-vpc
 
 ---
 
-# ### 4. Create Public Route Table
+ ### 4. Create Public Route Table
 
 ```
 Name: provider-public-rt
@@ -74,7 +74,7 @@ Private subnet has **no IGW route**.
 
 ---
 
-# ### 5. Launch Provider Backend EC2 (Private Subnet)
+ ### 5. Launch Provider Backend EC2 (Private Subnet)
 
 ```
 AMI: Amazon Linux 2
@@ -100,7 +100,7 @@ All traffic → 0.0.0.0/0
 
 ---
 
-# ### 6. Install HTTP Service on Provider Private EC2
+ ### 6. Install HTTP Service on Provider Private EC2
 
 Use **SSM Session Manager**.
 
@@ -134,13 +134,13 @@ curl localhost:8080
 
 ---
 
-# ## SECTION 2 — Network Load Balancer (Provider)
+ ## SECTION 2 — Network Load Balancer (Provider)
 
 The PrivateLink service **must** use a Network Load Balancer.
 
 ---
 
-# ### 7. Create Target Group
+ ### 7. Create Target Group
 
 ```
 Name: provider-tg
@@ -156,7 +156,7 @@ Register:
 
 ---
 
-# ### 8. Create Internal NLB
+ ### 8. Create Internal NLB
 
 ```
 Name: provider-nlb
@@ -175,7 +175,7 @@ Forward to TG: provider-tg
 
 ---
 
-# ### 9. Security Group for Backend
+ ### 9. Security Group for Backend
 
 Create SG for traffic *from PrivateLink*.
 
@@ -189,11 +189,11 @@ Attach to **backend EC2**.
 
 ---
 
-# ## SECTION 3 — Create Endpoint Service (Provider)
+ ## SECTION 3 — Create Endpoint Service (Provider)
 
 ---
 
-# ### 10. Create Endpoint Service
+ ### 10. Create Endpoint Service
 
 Navigate:
 
@@ -219,13 +219,13 @@ Consumer VPC will use this.
 
 ---
 
-# ## SECTION 4 — Consumer VPC
+ ## SECTION 4 — Consumer VPC
 
 The Consumer connects to the service using **Interface Endpoint**.
 
 ---
 
-# ### 11. Create Consumer VPC
+ ### 11. Create Consumer VPC
 
 ```
 Name: consumer-vpc
@@ -236,7 +236,7 @@ DNS Resolution: Enabled
 
 ---
 
-# ### 12. Create Consumer Subnets
+ ### 12. Create Consumer Subnets
 
 **Public Subnet**
 
@@ -256,7 +256,7 @@ Auto Public IP: Off
 
 ---
 
-# ### 13. Route Tables
+ ### 13. Route Tables
 
 ### Public route table:
 
@@ -278,7 +278,7 @@ Associate: consumer-private-a
 
 ---
 
-# ### 14. Consumer Private EC2
+ ### 14. Consumer Private EC2
 
 ```
 Name: consumer-ec2
@@ -304,13 +304,13 @@ All → 0.0.0.0/0
 
 ---
 
-# ## SECTION 5 — Interface Endpoint (Consumer)
+ ## SECTION 5 — Interface Endpoint (Consumer)
 
 This is what actually connects to the Provider’s Endpoint Service.
 
 ---
 
-# ### 15. Create Interface Endpoint in Consumer VPC
+ ### 15. Create Interface Endpoint in Consumer VPC
 
 Go to:
 
@@ -333,7 +333,7 @@ Create.
 
 ---
 
-# ### 16. Provider Accepts Connection
+ ### 16. Provider Accepts Connection
 
 Go to:
 
@@ -347,11 +347,11 @@ Status becomes **Available**.
 
 ---
 
-# ## SECTION 6 — Testing End‑to‑End
+ ## SECTION 6 — Testing End‑to‑End
 
 ---
 
-# ### 17. DNS Test From Consumer EC2
+ ### 17. DNS Test From Consumer EC2
 
 Inside consumer EC2:
 
@@ -365,7 +365,7 @@ Expected:
 
 ---
 
-# ### 18. Service Access Test
+ ### 18. Service Access Test
 
 Run:
 
@@ -388,7 +388,7 @@ This confirms:
 
 ---
 
-# ## END — Final Architecture Flow
+ ## END — Final Architecture Flow
 
 ```
 Consumer EC2 (21.x)
