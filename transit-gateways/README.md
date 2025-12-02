@@ -289,3 +289,192 @@ This enabled TGW to forward packets.
 * Full mesh connectivity achieved
 
 ---
+
+## ⭐ Goal Architecture
+
+### we will build this:
+```bash
+                   +----------------------+
+                   |  Shared Services VPC |  (VPC-C)
+                   |  (Logging, AD, SSM)  |
+                   +----------+-----------+
+                              |
+                              | TGW
+                              |
++-------------------+     +---+-----+     +------------------+
+|    VPC-A (App)    |-----|  TGW    |-----|  VPC-B (DB)      |
++-------------------+     +---------+     +------------------+
+```
+
+### Rules:
+
+- App ↔ Shared Services = ALLOWED
+
+- DB ↔ Shared Services = ALLOWED
+
+- App ↛ DB = DENIED
+
+- DB ↛ App = DENIED
+
+**This is the whole point of Shared Services architecture.**
+
+### ⭐ Step 1 — Confirm VPC Setup
+```bash
+# VPC-A (App)
+10.0.0.0/16
+```
+
+```bash
+# VPC-B (DB)
+10.1.0.0/16
+```
+```bash
+# VPC-C (Shared-Services)
+10.2.0.0/16
+```
+
+EC2s exist in each VPC (public for now, fine).
+
+So we go directly to TGW configuration.
+
+### ⭐ Step 2 — Create TWO Transit Gateway Route Tables
+Go to:
+
+#### VPC → Transit Gateway Route Tables → Create
+
+1️⃣  `tgw-rt-shared`
+
+Used by Shared Services VPC
+Allow all incoming traffic
+Return traffic allowed to only required VPCs
+
+2️⃣ `tgw-rt-app-db`
+
+Used by both App and DB VPCs
+Allow traffic ONLY towards shared services
+Block App ↔ DB cross-talk via routing
+
+### ⭐ Step 3 — Attach TGW Attachments to Correct Route Tables
+Our attachments:
+
+- tgw-attach-app (VPC-A)
+
+- tgw-attach-db (VPC-B)
+
+- tgw-attach-ss (VPC-C)
+
+We will associate each to the correct TGW route table.
+
+#### 3.1 — Associate App VPC to tgw-rt-app-db
+
+TGW → Route Tables → `tgw-rt-app-db` → **Associations**
+```bash
+Attach: tgw-attach-app
+```
+
+#### 3.2 — Associate DB VPC to the same route table
+```bash
+Attach: tgw-attach-db
+```
+
+#### 3.3 — Associate Shared Services VPC to `tgw-rt-shared`
+```bash
+Attach: tgw-attach-ss
+```
+
+### ⭐ Step 4 — Configure Propagation Rules
+### 🔵 In `tgw-rt-app-db` (App+DB table):
+
+➡ ADD PROPAGATION from:
+
+Shared Services attachment (`tgw-attach-ss`)
+
+➡ REMOVE propagation from:
+
+- App attachment
+
+- DB attachment
+
+This ensures:
+
+- App → Shared = Allowed
+
+- DB → Shared = Allowed
+
+- App → DB = ❌ Not allowed
+
+- DB → App = ❌ Not allowed
+
+### 🟣 In `tgw-rt-shared` (Shared services table):
+
+➡ ADD PROPAGATION from:
+
+- App attachment
+
+- DB attachment
+
+This ensures:
+
+- Shared → App = Allowed
+
+- Shared → DB = Allowed
+
+### ⭐ Step 5 — Update VPC Route Tables
+
+Each **public route table** must send traffic to TGW only where required.
+#### 🔵 VPC-A Route Table
+```bash
+10.2.0.0/16 → tgw-attach-app   (allowed)
+10.1.0.0/16 → NO ROUTE        (block)
+```
+#### 🟢 VPC-B Route Table
+```bash
+10.2.0.0/16 → tgw-attach-db   (allowed)
+10.0.0.0/16 → NO ROUTE        (block)
+```
+
+#### 🟣 VPC-C Route Table
+```bash
+10.0.0.0/16 → tgw-attach-ss   (allowed)
+10.1.0.0/16 → tgw-attach-ss   (allowed)
+```
+
+### ⭐ Step 6 — TESTING
+#### ✔ Test 1 — App → Shared Services
+```bash
+ping 10.2.x.x → MUST WORK
+
+```
+
+#### ✔ Test 2 — DB → Shared Services
+```bash
+ping 10.2.x.x → MUST WORK
+
+```
+
+#### ❌ Test 3 — App → DB
+```bash
+ping 10.1.x.x → MUST FAIL
+
+```
+
+
+#### ❌ Test 4 — DB → App
+```bash
+ping 10.0.x.x → MUST FAIL
+
+```
+
+
+#### ✔ Test 5 — Shared Services → App
+```bash
+ping 10.0.x.x → MUST WORK
+```
+
+#### ✔ Test 6 — Shared Services → DB
+```bash
+ping 10.1.x.x → MUST WORK
+```
+
+
+#### ✔ Test 6 — Shared Services → DB
