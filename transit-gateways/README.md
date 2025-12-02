@@ -145,6 +145,7 @@ This produces three attachments:
 ---
 
 ## 3.5 **Configure TGW Route Table**
+**From the TGW attachment listed under Association, you can reach the TGW attachments listed under Propagation.**
 
 Go to: **Transit Gateway Route Tables → default → Routes**
 
