@@ -124,7 +124,9 @@ This creates:
 ---
 
 ## 3.4 **Create TGW Attachments (One per VPC)**
+“A TGW attachment is the doorway through which the VPC communicates with the Transit Gateway.”
 
+Without the attachment, the VPC cannot send or receive traffic through the TGW.
 For each VPC:
 
 1. **Transit Gateway Attachments → Create**
