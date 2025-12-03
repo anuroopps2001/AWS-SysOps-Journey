@@ -478,3 +478,214 @@ ping 10.1.x.x → MUST WORK
 
 
 #### ✔ Test 6 — Shared Services → DB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## ✅ 1. What is a “Spoke” VPC?
+
+In networking, a hub-and-spoke architecture looks like this:
+```bash
+         Central Hub
+      /      |       \
+   spoke1  spoke2   spoke3
+```
+
+In AWS TGW architecture:
+
+**✔ “Spoke VPC” = Application VPC**
+
+Examples:
+
+- Prod VPC
+
+- Dev VPC
+
+- Staging VPC
+
+- Mobile backend VPC
+
+They do NOT talk directly to each other.
+All communication must go through a central VPC (inspection/shared).
+
+So:
+```bash
+Prod VPC  →  
+            \
+             TGW → Inspection VPC
+            /
+Dev VPC   →
+```
+
+## ✅ 2. What is the “Hub”?
+
+The hub here is:
+
+**✔ The Inspection VPC**
+
+- Has Firewalls, IDS/IPS (Palo Alto, CheckPoint, FortiGate)
+
+- May have shared services (logging, proxy, antivirus)
+
+- Monitors or controls traffic
+
+This ensures:
+
+- Prod cannot bypass inspection
+
+- Dev cannot bypass inspection
+
+- All traffic is logged/scanned
+
+## ✅ 3. Why do we need multiple TGW route tables?
+
+If we use one TGW route table, this happens:
+```bash
+Prod VPC ↔ Dev VPC  (talk directly = NOT allowed)
+```
+
+This is dangerous.
+
+So AWS recommends:
+
+**✔ Use multiple TGW route tables to force traffic paths**
+
+We created 3 TGW route tables:
+
+### 🔹 TGW-RT-SPOKE (for Prod + Dev)
+
+**Associated Attachments:**
+
+- Prod VPC Attachment
+
+- Dev VPC Attachment
+
+Propagation:
+
+- Only INSPECTION VPC
+
+- Only SHARED SERVICES VPC
+
+Meaning:
+Prod and Dev **see only the Inspection and Shared VPC routes**, not each other.
+
+Prod EC2 routing table:
+```bash
+10.2.0.0/16 (Dev) → Inspection VPC (via TGW)
+```
+
+This forces traffic to go through Firewalls.
+
+
+### 🔹 TGW-RT-INSPECTION
+
+**Associated:**
+
+- Inspection VPC Attachment
+
+**Propagation:**
+
+- Prod VPC
+
+- Dev VPC
+
+- Shared VPC
+
+Meaning:
+Inspection VPC knows all other CIDRs.
+This is needed because firewall must forward traffic to destination.
+
+### 🔹 TGW-RT-SHARED
+
+**Associated:**
+
+- Shared services VPC attachment
+
+**Propagation:**
+
+- Prod
+
+- Dev
+
+- Inspection
+
+Meaning:
+Shared VPC can talk to all.
+
+## 🔥 4. Traffic Flow (VERY IMPORTANT)
+
+Let’s assume:
+
+- Prod EC2 IP = 10.1.0.10
+
+- Dev EC2 IP = 10.2.0.20
+
+- Inspection VPC has firewall EC2 = 10.50.0.5
+
+
+## 📌 **Step-by-step traffic flow: Prod → Dev**
+**Step 1: Prod EC2 sends packet**
+
+```bash
+To: 10.2.0.20 (Dev)
+```
+
+VPC route table says:
+```bash
+10.2.0.0/16 → tgw-xxxx
+```
+
+So packet goes to TGW.
+
+**Step 2: TGW receives the packet**
+
+TGW looks at the **route table associated with Prod attachment:**
+
+**→ This is TGW-RT-SPOKE**
+
+TGW-RT-SPOKE contains:
+
+```bash
+10.2.0.0/16 → Inspection VPC attachment
+```
+So TGW forwards to **Inspection VPC.**
+
+**Step 3: Firewall/Inspection VPC receives packet**
+
+Firewall decides traffic is allowed.
+
+Firewall then sends traffic **back to TGW.**
+
+Firewall’s route table says:
+```bash
+10.2.0.0/16 (Dev) → tgw-xxxx
+```
+
+**Step 4: TGW receives firewall packet**
+
+This time packet arrives via **Inspection attachment**, so TGW uses:
+
+**→ TGW-RT-INSPECTION**
+
+TGW-RT-INSPECTION contains:
+```bash
+10.2.0.0/16 → Dev VPC attachment
+```
+
+So TGW forwards to Dev VPC.
+
+**Step 5: Dev EC2 receives packet**
+
+Reply flows back the same path.
